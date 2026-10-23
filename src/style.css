@@ -154,3 +154,7 @@ kbd { background:var(--p2); }
 .wpick { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; } .wpick button { display:flex; align-items:center; gap:6px; } .wpick img { width:18px; height:18px; }
 .keynote { margin:6px 0 10px; padding-left:18px; color:var(--m); line-height:1.5; font-size:12.5px; } .keynote b { color:var(--t); }
 @media (max-width: 860px) { .intro ol, .trackgrid { grid-template-columns:1fr; } }
+/* v3.2: chart fills its panel, mint sliders */
+@media (min-width: 861px) { .chartp { display:flex; flex-direction:column; } .chartp .chartwrap { flex:1; min-height:540px; height:auto; } }
+input[type=range] { accent-color: var(--mint); }
+.replay button.on { border-color:var(--mint); color:var(--mint); }

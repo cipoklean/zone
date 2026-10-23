@@ -28,7 +28,7 @@ export default function App() {
   const [interval, setIntervalV] = useState(qs.get('i') || '15m');
   const [addr, setAddr] = useState(qs.get('addr') || '');
   const [wpos, setWpos] = useState<WalletPos[]>([]);
-  const [range, setRange] = useState(+(qs.get('r') || 0.6));
+  const [range, setRange] = useState(+(qs.get('r') || 0.2));
   const [whales, setWhales] = useState(true); const [profile, setProfile] = useState(true);
   const [pick, setPick] = useState<number>(); const [summary, setSummary] = useState<any>(null); const [status, setStatus] = useState(A.hub.status); const [q, setQ] = useState('');
   const m = useMarket(symbol, interval); const funding = useFundingTable();

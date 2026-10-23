@@ -43,7 +43,7 @@ export default function App() {
 
   const info = symbols.find(s => s.symbol === symbol); const tick = info?.tickSize || 0.01; const t = tickers[symbol];
   const marks = useMemo(() => Object.fromEntries(Object.values(tickers).map(t => [t.symbol, t.lastPrice])), [tickers]);
-  const overlays: Overlay[] = wpos.filter(p => p.symbol === symbol).flatMap(p => [{ price: p.entry, label: `Your ${p.size > 0 ? 'long' : 'short'} entry`, color: '#f5c542' }, ...(p.liq > 0 ? [{ price: p.liq, label: 'Your liquidation', color: '#ef4444', style: 'dash' as const }] : [])]);
+  const overlays: Overlay[] = wpos.filter(p => p.symbol === symbol).flatMap(p => [{ price: p.entry, label: `Your ${p.size > 0 ? 'long' : 'short'} entry`, color: '#f8931a' }, ...(p.liq > 0 ? [{ price: p.liq, label: 'Your liquidation', color: '#f43f5e', style: 'dash' as const }] : [])]);
   const venues = funding.find(f => f.symbol === symbol)?.venues;
   const list = Object.values(tickers).filter(x => symbols.some(s => s.symbol === x.symbol) && x.symbol.toLowerCase().includes(q.toLowerCase())).sort((a, b) => (b.quoteVolume || 0) - (a.quoteVolume || 0));
   const mid = m.bids[0] && m.asks[0] ? (m.bids[0][0] + m.asks[0][0]) / 2 : m.mark || 0;
@@ -84,7 +84,7 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <div className="brand"><svg width="26" height="26" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="#f5c542" strokeWidth="2.5" /><path d="M17 7l-6 10h5l-1 8 6-10h-5z" fill="#f5c542" /></svg><div><b>Strike Zone</b><span>order flow · liquidity · risk for Strike perps</span></div></div>
+        <div className="brand"><svg width="26" height="26" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="#4efab0" strokeWidth="2.5" /><path d="M17 7l-6 10h5l-1 8 6-10h-5z" fill="#4efab0" /></svg><div><b>Strike Zone</b><span>order flow · liquidity · risk for Strike perps</span></div></div>
         {summary && <div className="stats"><span>Users <b>{(+summary.total_users).toLocaleString()}</b></span><span>All-time volume <b>{fmtUsd(+summary.total_volume_usd)}</b></span><span>Liquidated <b>{fmtUsd(+summary.total_liquidated_usd)}</b></span><span>Revenue <b>{fmtUsd(+summary.total_revenue_usd)}</b></span></div>}
         <div className="hright">
           <span className={`live ${m.demo ? 'demo' : stale ? 'stale' : status}`}>{m.demo ? '◌ demo data' : status === 'live' ? (stale ? '● stale' : '● live') : status === 'connecting' ? '○ connecting' : '○ reconnecting'}</span>
@@ -109,25 +109,30 @@ export default function App() {
           <label className="tog"><input type="checkbox" checked={whales} onChange={e => setWhales(e.target.checked)} /> Whale liq. lines</label>
         </div>
         <div className="grid-main">
-          <div className="panel chartp"><Chart m={m} overlays={overlays} showWhales={whales} showProfile={profile} /><div className="legend"><span><i style={{ background: '#22c55e' }} />bids</span><span><i style={{ background: '#ef4444' }} />asks</span><span><i style={{ background: '#f97316' }} />long liquidations</span><span><i style={{ background: '#38bdf8' }} />short liquidations</span><span><i style={{ background: '#f5c542' }} />your position</span></div></div>
+          <div className="panel chartp"><Chart m={m} overlays={overlays} showWhales={whales} showProfile={profile} /><div className="legend"><span><i style={{ background: '#4efab0' }} />bids</span><span><i style={{ background: '#f43f5e' }} />asks</span><span><i style={{ background: '#c084fc' }} />long liquidations</span><span><i style={{ background: '#4eabfa' }} />short liquidations</span><span><i style={{ background: '#f8931a' }} />your position</span></div></div>
           <OrderBook m={m} tick={tick} onPick={p => { setPick(p); setSheet(true); }} />
           <div className={`sheet ${sheet ? 'open' : ''}`}><button className="sheetclose" onClick={() => setSheet(false)}>✕</button><Ticket m={m} info={info} pickPrice={pick} onAccount={pickWallet} preset={preset} /></div>
         </div>
       </section>
 
+      <h2 className="sect">Order flow <span>Who's hitting the book, second by second</span></h2>
       <section className="grid-2">
         <div className="panel heatp"><div className="ph"><b>Order-flow heatmap</b><span className="muted">each column = 1s of Strike's live book · bubbles = taker trades</span><select value={range} onChange={e => setRange(+e.target.value)}>{[0.2, 0.4, 0.6, 1, 2, 4].map(r => <option key={r} value={r}>±{r}%</option>)}</select></div><Heatmap m={m} tick={tick} rangePct={range} /></div>
         <Tape m={m} tick={tick} />
       </section>
 
+      <h2 className="sect">What it means <span>Plain-language reads from live Strike data, one click from the ticket</span></h2>
       <section className="grid-2b">
         <Brief m={m} symbol={symbol} tick={tick} change24h={t?.priceChangePercent} venues={venues} onTrade={onTrade} />
         <Derivs m={m} tick={tick} />
       </section>
 
+      <h2 className="sect">Alerts <span>Get pinged before the move, not after</span></h2>
       <section><Alerts s={alertS} setS={setAlertS} log={alog} onTest={testAlert} /></section>
+      <h2 className="sect">Wallets &amp; traders <span>Look up any Strike account, follow the whales</span></h2>
       <section id="wallet"><Wallet addr={addr} setAddr={setAddr} marks={marks} onPositions={setWpos} onPick={setSymbol} /></section>
       <section><Discover onWallet={pickWallet} symbol={symbol} mark={m.mark} /></section>
+      <h2 className="sect">Funding <span>Where Strike pays you to hold, net of fees</span></h2>
       <section><FundingArb rows={funding} onPick={s => { setSymbol(s); scrollTo({ top: 0, behavior: 'smooth' }); }} /></section>
 
       <button className="fab" onClick={() => setSheet(true)}>Trade {symbol.replace('-USD', '')}</button>

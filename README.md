@@ -33,7 +33,7 @@ Strike V2 is a full CLOB with a public API, but traders still navigate it with a
 
 ## How to read it
 
-- **Green / red**: bids and buyers / asks and sellers. **Orange**: long liquidations (below price, forced sells). **Blue**: short liquidations (above price, forced buys). **Yellow**: mid price and your own position.
+- **Green / red**: bids and buyers / asks and sellers. **Violet**: long liquidations (below price, forced sells). **Sky blue**: short liquidations (above price, forced buys). **Gold**: your own position (white is the mid price on the heatmap).
 - **Chart edges**: left is resting liquidity, right is the liquidation map. Price tends to get pulled toward the bigger liquidation pool.
 - **Heatmap**: bright bands are big resting orders. A band that disappears as price approaches it was likely a spoof; a band that holds while bubbles hit it is absorption.
 - **Pressure** above +15 leans up, below −15 leans down. Hover for its parts.

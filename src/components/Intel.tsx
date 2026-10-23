@@ -3,7 +3,7 @@ import type { MarketState } from '../useMarket';
 import { brief, TradeIdea } from '../insights';
 import { FundingRow, fetchFundingComparison, fmtPct, fmtPx, fmtUsd } from '../api';
 
-export function Spark({ data, color = '#f5c542', h = 40, zero = false }: { data: number[]; color?: string; h?: number; zero?: boolean }) {
+export function Spark({ data, color = '#f8931a', h = 40, zero = false }: { data: number[]; color?: string; h?: number; zero?: boolean }) {
   if (data.length < 2) return <svg height={h} />;
   let mn = Math.min(...data), mx = Math.max(...data); if (zero) { mn = Math.min(mn, 0); mx = Math.max(mx, 0); } if (mx === mn) mx = mn + 1;
   const W = 240; const pts = data.map((v, i) => `${(i / (data.length - 1)) * W},${h - ((v - mn) / (mx - mn)) * (h - 4) - 2}`).join(' ');
@@ -36,8 +36,8 @@ export function Derivs({ m, tick }: { m: MarketState; tick: number }) {
         <span>Funding (1h)</span><b className={(m.fundingHourly ?? 0) >= 0 ? 'up' : 'down'}>{m.fundingHourly !== undefined ? (m.fundingHourly * 100).toFixed(4) + '%' : '—'}</b><span>Annualized</span><b>{isFinite(apr) ? apr.toFixed(1) + '%' : '—'}</b><span>Next funding</span><b>{Math.floor(mins / 60)}m {mins % 60}s</b>
         <span>Open interest</span><b>{fmtUsd(oiUsd)}</b><span>Crowd long</span><b>{m.ls ? m.ls.long.toFixed(0) + '%' : '—'}</b><span>Top traders long</span><b>{m.topLs ? m.topLs.long.toFixed(0) + '%' : '—'}</b></div>
       <div className="sp"><span className="muted">Funding, 7d (hourly)</span><Spark data={m.fundingSeries.map(r => r[1])} zero color="#a78bfa" /></div>
-      <div className="sp"><span className="muted">Open interest (1h)</span><Spark data={m.oiSeries.map(r => r[1])} color="#38bdf8" /></div>
-      <div className="sp"><span className="muted">Avg spread (1h)</span><Spark data={m.spreadSeries.map(r => r[1])} color="#f97316" /></div>
+      <div className="sp"><span className="muted">Open interest (1h)</span><Spark data={m.oiSeries.map(r => r[1])} color="#4eabfa" /></div>
+      <div className="sp"><span className="muted">Avg spread (1h)</span><Spark data={m.spreadSeries.map(r => r[1])} color="#c084fc" /></div>
     </div>
   );
 }

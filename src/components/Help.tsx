@@ -8,9 +8,9 @@ export default function Help({ onClose }: { onClose: () => void }) {
         <div className="hgrid">
           <div>
             <h4>Colors</h4>
-            <p>{sw('#22c55e')} Bids, buyers, taker buys</p><p>{sw('#ef4444')} Asks, sellers, taker sells</p>
-            <p>{sw('#f97316')} Long liquidations (below price: longs get forced to sell)</p><p>{sw('#38bdf8')} Short liquidations (above price: shorts get forced to buy)</p>
-            <p>{sw('#f5c542')} Mid price, your position, highlights</p><p>{sw('#eab308')} Warnings</p>
+            <p>{sw('#4efab0')} Bids, buyers, taker buys</p><p>{sw('#f43f5e')} Asks, sellers, taker sells</p>
+            <p>{sw('#c084fc')} Long liquidations (violet, below price: longs get forced to sell)</p><p>{sw('#4eabfa')} Short liquidations (sky blue, above price: shorts get forced to buy)</p>
+            <p>{sw('#f8931a')} Your position, entry and highlights</p><p>{sw('#ffffff')} Mid price on the heatmap</p><p>{sw('#eab308')} Warnings</p>
             <h4>Pressure score</h4>
             <p>One number from −100 to +100: book imbalance within 1% (40 pts), 15-minute taker flow (30), which liquidation pool is closer and bigger (20), and crowded funding as a contrarian tilt (10). Above +15 leans up, below −15 leans down. Hover it to see the parts.</p>
           </div>

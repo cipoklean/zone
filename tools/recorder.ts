@@ -6,7 +6,7 @@ import { pressure } from '../src/insights';
 import { appendFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 const OUT = process.cwd() + '/tools/data/'; mkdirSync(OUT, { recursive: true });
-const HEAT = (process.env.HEAT || 'BTC-USD,HYPE-USD').split(',').filter(Boolean);
+const HEAT = (process.env.HEAT ?? 'BTC-USD,HYPE-USD').split(',').filter(s => s && s !== 'none');
 const HEAT_SECS = +(process.env.HEAT_SECS || 1500);
 const RUN_MIN = +(process.env.RUN_MIN || 270);
 

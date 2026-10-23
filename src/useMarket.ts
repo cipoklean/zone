@@ -31,8 +31,8 @@ export function useMarket(symbol: string, interval: string) {
     };
     const applyDepth = (m: any) => {
       if (m.u <= book.current.id) return; book.current.id = m.u;
-      for (const [p, q] of m.b) { const pn = +p, qn = +q; qn === 0 ? book.current.bids.delete(pn) : book.current.bids.set(pn, qn); }
-      for (const [p, q] of m.a) { const pn = +p, qn = +q; qn === 0 ? book.current.asks.delete(pn) : book.current.asks.set(pn, qn); }
+      for (const [p, q] of m.b || []) { const pn = +p, qn = +q; qn === 0 ? book.current.bids.delete(pn) : book.current.bids.set(pn, qn); }
+      for (const [p, q] of m.a || []) { const pn = +p, qn = +q; qn === 0 ? book.current.asks.delete(pn) : book.current.asks.set(pn, qn); }
     };
     const off = A.hub.on(m => {
       if (!alive || (m.s && m.s !== symbol)) return; ref.current.lastMsg = Date.now(); if (ref.current.demo && m.e === 'depthUpdate') { ref.current.demo = undefined; ref.current.error = undefined; }

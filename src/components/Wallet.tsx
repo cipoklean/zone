@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as A from '../api';
 import { fmtPct, fmtPx, fmtUsd, n, short } from '../api';
+import { cardanoWallets, connectCardano } from '../cardano';
 
 export interface WalletPos { symbol: string; size: number; entry: number; liq: number; upnl: number; leverage: number; margin_mode: string; funding: number }
 
@@ -8,6 +9,9 @@ export interface WalletPos { symbol: string; size: number; entry: number; liq: n
 export default function Wallet({ addr, setAddr, marks, onPositions, onPick }: { addr: string; setAddr: (a: string) => void; marks: Record<string, number>; onPositions: (p: WalletPos[]) => void; onPick: (s: string) => void }) {
   const [input, setInput] = useState(addr); const [d, setD] = useState<any>(null); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   useEffect(() => setInput(addr), [addr]);
+  const [cw, setCw] = useState<{ id: string; name: string; icon: string }[]>([]); const [pickW, setPickW] = useState(false);
+  useEffect(() => { const f = () => setCw(cardanoWallets()); f(); const t = setTimeout(f, 1200); return () => clearTimeout(t); }, []);
+  const cip30 = async (id: string) => { setPickW(false); setErr(''); try { setAddr(await connectCardano(id)); } catch (e: any) { setErr(`Wallet didn't connect: ${e?.info || e?.message || e}`); } };
   useEffect(() => {
     if (!addr) { setD(null); onPositions([]); return; } let alive = true;
     const load = async () => {
@@ -27,7 +31,9 @@ export default function Wallet({ addr, setAddr, marks, onPositions, onPick }: { 
   return (
     <div className="panel wallet">
       <div className="ph"><b>Wallet lens</b><span className="muted">any Cardano, EVM or Solana address trading on Strike</span></div>
-      <form className="row" onSubmit={e => { e.preventDefault(); setAddr(input.trim()); }}><input placeholder="addr1… / 0x… / Solana address" value={input} onChange={e => setInput(e.target.value)} /><button>{busy ? '…' : 'Load'}</button>{addr && <button type="button" className="ghost" onClick={() => setAddr('')}>Clear</button>}</form>
+      <form className="row" onSubmit={e => { e.preventDefault(); setAddr(input.trim()); }}><input placeholder="addr1… / 0x… / Solana address" value={input} onChange={e => setInput(e.target.value)} /><button>{busy ? '…' : 'Load'}</button>{addr && <button type="button" className="ghost" onClick={() => setAddr('')}>Clear</button>}<button type="button" className="cardano" onClick={() => cw.length === 1 ? cip30(cw[0].id) : setPickW(v => !v)}>Connect Cardano wallet</button></form>
+      {pickW && <div className="wpick">{cw.length ? cw.map(w => <button key={w.id} onClick={() => cip30(w.id)}>{w.icon && <img src={w.icon} alt="" />}{w.name}</button>) : <span className="muted small">No Cardano wallet found in this browser. Install Eternl, Lace or another CIP-30 wallet, or paste an address.</span>}</div>}
+      {!addr && <p className="muted small">Read-only: connecting only shares your address, so we can show your Strike margin, positions and liquidation distance. It can't sign or move funds.</p>}
       {err && <p className="down">{err}</p>}
       {acc && <>
         <div className="kv"><span>Equity</span><b>{fmtUsd(mb, 2)}</b><span>Available</span><b>{fmtUsd(n(acc.available_balance), 2)}</b><span>Unrealized PnL</span><b className={n(acc.unrealized_pnl) >= 0 ? 'up' : 'down'}>{fmtUsd(n(acc.unrealized_pnl), 2)}</b>

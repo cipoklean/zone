@@ -136,3 +136,21 @@ footer { margin-top:40px; padding-top:18px; border-top:1px solid var(--b); }
 .fab { background:var(--mint); color:#04140d; border-radius:14px; }
 kbd { background:var(--p2); }
 @media (max-width: 860px) { .app { padding:12px 12px 84px; } .mkt .px { font-size:24px; } .sect { margin-top:24px; } .panel { padding:12px; border-radius:14px; } }
+
+/* v3.1: hero flow, case study, track record, cardano connect */
+.intro { background:linear-gradient(135deg,#4efab010,#141414 55%); border:1px solid #4efab033; border-radius:18px; padding:18px 20px; margin-bottom:14px; }
+.introhead { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; } .introhead b { font-size:16px; font-weight:600; line-height:1.4; max-width:820px; }
+.intro ol { list-style:none; padding:0; margin:14px 0 0; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.intro li { display:flex; gap:12px; background:#0f0f0fcc; border:1px solid var(--b); border-radius:14px; padding:12px 14px; }
+.intro li > span { flex:none; width:26px; height:26px; border-radius:50%; background:#4efab01f; color:var(--mint); display:grid; place-items:center; font-weight:600; font-size:13px; }
+.intro li p { margin:4px 0 8px; color:var(--m); line-height:1.45; } .intro li button { border-color:#4efab055; color:var(--mint); }
+.replaytag.case { background:#4efab0; color:#04140d; }
+.casenote { margin:10px 2px 0; color:var(--m); line-height:1.5; } .casenote b { color:var(--t); font-weight:600; margin-right:4px; }
+.track p { line-height:1.55; margin:0 0 12px; } .trackgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.tcard { background:var(--p2); border:1px solid var(--b); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:6px; }
+.tcard small { color:var(--m); text-transform:uppercase; letter-spacing:.08em; font-size:11px; } .tcard b { font-size:24px; font-weight:600; letter-spacing:-.01em; }
+.tcard span { line-height:1.5; } .tcard em { font-style:normal; color:var(--y); font-size:12.5px; }
+.cardano { background:#0033ad; border-color:#0033ad; color:#fff; } .cardano:hover { background:#1a4bd1; border-color:#1a4bd1; }
+.wpick { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; } .wpick button { display:flex; align-items:center; gap:6px; } .wpick img { width:18px; height:18px; }
+.keynote { margin:6px 0 10px; padding-left:18px; color:var(--m); line-height:1.5; font-size:12.5px; } .keynote b { color:var(--t); }
+@media (max-width: 860px) { .intro ol, .trackgrid { grid-template-columns:1fr; } }

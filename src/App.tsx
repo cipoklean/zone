@@ -11,6 +11,9 @@ import Discover from './components/Discover';
 import Ticket, { Preset } from './components/Ticket';
 import Alerts from './components/Alerts';
 import Help from './components/Help';
+import Track from './components/Track';
+import type { CaseStudy } from './components/Heatmap';
+import { loadCase } from './components/Heatmap';
 import { pressure, TradeIdea } from './insights';
 import { AlertEvent, deliver, evaluate, loadAlertSettings } from './alerts';
 import { usePressureScan } from './usePressureScan';
@@ -30,6 +33,10 @@ export default function App() {
   const [pick, setPick] = useState<number>(); const [summary, setSummary] = useState<any>(null); const [status, setStatus] = useState(A.hub.status); const [q, setQ] = useState('');
   const m = useMarket(symbol, interval); const funding = useFundingTable();
   const [preset, setPreset] = useState<Preset>(); const [sheet, setSheet] = useState(false); const [help, setHelp] = useState(false); const [copied, setCopied] = useState(false);
+  const [cs, setCs] = useState<CaseStudy | null>(null); const [intro, setIntro] = useState(() => localStorage.getItem('sz-intro') !== 'off');
+  useEffect(() => { if (cs && cs.symbol !== symbol) setCs(null); }, [symbol]);
+  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const watchCase = async () => { const c = cs || await loadCase(); if (c) { setCs(null); if (c.symbol !== symbol) setSymbol(c.symbol); setTimeout(() => setCs(c), 400); go('heat'); } };
   const [alertS, setAlertS] = useState(loadAlertSettings()); const [alog, setAlog] = useState<AlertEvent[]>([]); const [, tickNow] = useState(0);
 
   useEffect(() => {
@@ -96,6 +103,15 @@ export default function App() {
       {(m.demo || m.error) && <div className="banner">{m.demo ? `Strike's API isn't answering right now, so this is a saved snapshot from ${new Date(m.demo).toLocaleString()}. Live data resumes automatically.` : m.error}</div>}
       {stale && !m.demo && <div className="banner">No updates from Strike for {age}s. Reconnecting; numbers below may be out of date.</div>}
 
+      {intro && <div className="intro">
+        <div className="introhead"><b>Strike Zone shows where Strike's liquidity and liquidations sit, and turns that into a trade you can place.</b><button className="ghost" onClick={() => { setIntro(false); localStorage.setItem('sz-intro', 'off'); }}>✕</button></div>
+        <ol>
+          <li><span>1</span><div><b>Read the pressure</b><p>The number beside the price: who is leaning right now, from −100 to +100.</p></div></li>
+          <li><span>2</span><div><b>Watch the book move</b><p>Walls appear and vanish second by second, with forced liquidations nearby.</p><button onClick={watchCase}>▶ Watch a real replay</button></div></li>
+          <li><span>3</span><div><b>Act on a read</b><p>Each signal fills the ticket with entry, stop and target in one click.</p><button onClick={() => go('brief')}>See signals</button></div></li>
+        </ol>
+      </div>}
+
       <div className="strip">{list.slice(0, 40).map(x => <button key={x.symbol} className={x.symbol === symbol ? 'on' : ''} onClick={() => setSymbol(x.symbol)}><b>{x.symbol.replace('-USD', '')}</b><span className={x.priceChangePercent >= 0 ? 'up' : 'down'}>{fmtPct(x.priceChangePercent, 1)}</span>{scores[x.symbol] !== undefined && <em className={`pbadge ${scores[x.symbol] >= 15 ? 'up' : scores[x.symbol] <= -15 ? 'down' : ''}`} title="Pressure score">{scores[x.symbol] > 0 ? '+' : ''}{scores[x.symbol]}</em>}</button>)}</div>
 
       <section className="hero">
@@ -117,15 +133,17 @@ export default function App() {
 
       <h2 className="sect">Order flow <span>Who's hitting the book, second by second</span></h2>
       <section className="grid-2">
-        <div className="panel heatp"><div className="ph"><b>Order-flow heatmap</b><span className="muted">each column = 1s of Strike's live book · bubbles = taker trades</span><select value={range} onChange={e => setRange(+e.target.value)}>{[0.2, 0.4, 0.6, 1, 2, 4].map(r => <option key={r} value={r}>±{r}%</option>)}</select></div><Heatmap m={m} tick={tick} rangePct={range} /></div>
+        <div className="panel heatp" id="heat"><div className="ph"><b>Order-flow heatmap</b><span className="muted">each column = 1s of Strike's live book · bubbles = taker trades</span><select value={range} onChange={e => setRange(+e.target.value)}>{[0.2, 0.4, 0.6, 1, 2, 4].map(r => <option key={r} value={r}>±{r}%</option>)}</select>{!cs && <button className="ghost" onClick={watchCase}>Case study</button>}</div><Heatmap m={m} tick={tick} rangePct={range} cs={cs} onExitCase={() => setCs(null)} /></div>
         <Tape m={m} tick={tick} />
       </section>
 
       <h2 className="sect">What it means <span>Plain-language reads from live Strike data, one click from the ticket</span></h2>
-      <section className="grid-2b">
+      <section className="grid-2b" id="brief">
         <Brief m={m} symbol={symbol} tick={tick} change24h={t?.priceChangePercent} venues={venues} onTrade={onTrade} />
         <Derivs m={m} tick={tick} />
       </section>
+
+      <section><Track /></section>
 
       <h2 className="sect">Alerts <span>Get pinged before the move, not after</span></h2>
       <section><Alerts s={alertS} setS={setAlertS} log={alog} onTest={testAlert} /></section>

@@ -1,17 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
-import type { MarketState } from '../useMarket';
+import type { HeatCol, MarketState } from '../useMarket';
+import type { Trade } from '../api';
 import { fmtPx, fmtUsd } from '../api';
 
 // Bookmap-style order-flow heatmap: every column is one second of Strike's live order book.
 // Brightness = resting USD at that price; the line is mid price; bubbles are aggressive trades.
-export default function Heatmap({ m, tick, rangePct }: { m: MarketState; tick: number; rangePct: number }) {
+export interface CaseStudy { symbol: string; title: string; note: string; cols: HeatCol[]; trades: Trade[] }
+// Pre-recorded case studies (real Strike book captured by tools/recorder.ts) so replay works on first visit.
+export async function loadCase(): Promise<CaseStudy | null> {
+  try { const idx = await fetch('./replay/index.json').then(r => r.json()); const c = idx[0]; const d = await fetch(`./replay/${c.file}`).then(r => r.json());
+    return { symbol: d.symbol, title: c.title, note: c.note, cols: d.cols.map((x: any[]) => ({ t: x[0], mid: x[1], bids: x[2], asks: x[3], buys: x[4], sells: x[5] })), trades: d.trades.map((t: any[]) => ({ id: t[2], price: t[0], qty: t[1], time: t[2], buy: !!t[3] })) }; } catch { return null; }
+}
+
+export default function Heatmap({ m: live, tick, rangePct, cs, onExitCase }: { m: MarketState; tick: number; rangePct: number; cs?: CaseStudy | null; onExitCase?: () => void }) {
+  const [cv0, setCv0] = useState(0);
+  const m = cs ? ({ ...live, heat: cs.cols, trades: cs.trades, version: cv0 } as MarketState) : live;
   const cv = useRef<HTMLCanvasElement>(null), wrap = useRef<HTMLDivElement>(null);
   const hover = useRef<{ x: number; y: number } | null>(null);
   // Session replay: endT = null follows live; otherwise the view ends at that recorded second.
   const [endT, setEndT] = useState<number | null>(null); const [playing, setPlaying] = useState(false);
   const cols0 = m.heat; const endIdx = endT === null ? cols0.length - 1 : Math.max(0, cols0.findIndex(c => c.t >= endT));
-  useEffect(() => { if (!playing) return; const t = setInterval(() => setEndT(e => { if (e === null) return null; const i = m.heat.findIndex(c => c.t > e + 250 * 4 - 1); if (i < 0 || i >= m.heat.length - 1) { setPlaying(false); return null; } return m.heat[i].t; }), 250); return () => clearInterval(t); }, [playing]);
-  useEffect(() => { setEndT(null); setPlaying(false); }, [m]);
+  useEffect(() => { if (!playing) return; const H = m.heat; const step = cs ? 4 : 1; const t = setInterval(() => setEndT(e => { if (e === null) return null; const i = H.findIndex(c => c.t > e + 1000 * step - 1); if (i < 0 || i >= H.length - 1) { setPlaying(false); return cs ? H[H.length - 1].t : null; } return H[i].t; }), 250); return () => clearInterval(t); }, [playing, cs]);
+  useEffect(() => { setEndT(null); setPlaying(false); }, [live, cs]);
+  useEffect(() => { if (cs) { setEndT(cs.cols[Math.min(60, cs.cols.length - 1)].t); setPlaying(true); } }, [cs]);
+  useEffect(() => { if (cs) setCv0(v => v + 1); }, [endT]);
 
   useEffect(() => {
     const c = cv.current, w = wrap.current; if (!c || !w) return;
@@ -41,13 +53,15 @@ export default function Heatmap({ m, tick, rangePct }: { m: MarketState; tick: n
   }, [m.version, rangePct, endT]);
 
   const first = cols0[0]?.t, cur = cols0[endIdx]?.t; const ago = cur ? Math.round((Date.now() - cur) / 1000) : 0;
+  const clock = cur ? new Date(cur).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
   return <>
-    <div ref={wrap} className="heat" onMouseMove={e => { const r = e.currentTarget.getBoundingClientRect(); hover.current = { x: e.clientX - r.left, y: e.clientY - r.top }; }} onMouseLeave={() => (hover.current = null)}><canvas ref={cv} />{endT !== null && <span className="replaytag">REPLAY · {ago}s ago</span>}</div>
+    <div ref={wrap} className="heat" onMouseMove={e => { const r = e.currentTarget.getBoundingClientRect(); hover.current = { x: e.clientX - r.left, y: e.clientY - r.top }; }} onMouseLeave={() => (hover.current = null)}><canvas ref={cv} />{cs ? <span className="replaytag case">CASE STUDY · {cs.symbol} · {clock}</span> : endT !== null && <span className="replaytag">REPLAY · {ago}s ago</span>}</div>
     <div className="replay">
       <button onClick={() => { if (endT === null) { if (cols0.length < 10) return; setEndT(cols0[Math.max(0, cols0.length - 121)].t); setPlaying(true); } else setPlaying(p => !p); }} title="Replay (R)" id="replay-btn">{playing ? '❚❚' : '▶'}</button>
       <input type="range" min={0} max={Math.max(0, cols0.length - 1)} value={endIdx} onChange={e => { const i = +e.target.value; setPlaying(false); setEndT(i >= cols0.length - 1 ? null : cols0[i].t); }} />
-      <button className={endT === null ? 'on' : ''} onClick={() => { setEndT(null); setPlaying(false); }}>Live</button>
-      <span className="muted small">{first ? `${Math.round((Date.now() - first) / 60000)} min recorded this session` : 'recording…'}</span>
+      <button className={endT === null && !cs ? 'on' : ''} onClick={() => { setEndT(null); setPlaying(false); onExitCase?.(); }}>Live</button>
+      <span className="muted small">{cs ? `${Math.round(cs.cols.length / 60)} min of real Strike book · 4× speed` : first ? `${Math.round((Date.now() - first) / 60000)} min recorded this session` : 'recording…'}</span>
     </div>
+    {cs && <p className="casenote"><b>{cs.title}</b> {cs.note}</p>}
   </>;
 }

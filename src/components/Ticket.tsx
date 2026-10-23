@@ -104,6 +104,7 @@ export default function Ticket({ m, info, pickPrice, onAccount, preset }: { m: M
         <button className="ghost" onClick={() => { setWallet(null); setAcct(null); setOrders([]); }}>Disconnect API wallet</button>
       </> : <div className="connect">
         <p className="muted small">Trade from here with a Strike <b>API wallet</b>: it can place and cancel orders but <b>cannot withdraw</b>. The key stays in this tab's memory and is never sent anywhere; requests are Ed25519-signed in your browser.</p>
+        <ul className="keynote"><li>Create a <b>fresh API wallet just for Strike Zone</b>, and keep only trading margin behind it.</li><li>Any key held in a web page can be read by a malicious browser extension or a site bug. That's why we only accept API wallets, which can't withdraw.</li><li>Closing or reloading the tab forgets the key.</li></ul>
         <input type="password" placeholder="API wallet private key (hex)" value={keyIn} onChange={e => setKeyIn(e.target.value)} />
         <div className="row"><button disabled={!keyIn || busy} onClick={connect}>Connect</button><button className="ghost" onClick={genKey}>Generate key pair</button></div>
         {gen && <div className="gen small"><div>Register this public key at <a href={`${APP}/api-keys`} target="_blank">app.strikefinance.org/api-keys</a>:</div><code>{gen.pub}</code><div>Private key (save it now, then paste above):</div><code>{gen.priv}</code></div>}

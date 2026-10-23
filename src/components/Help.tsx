@@ -12,7 +12,7 @@ export default function Help({ onClose }: { onClose: () => void }) {
             <p>{sw('#c084fc')} Long liquidations (violet, below price: longs get forced to sell)</p><p>{sw('#4eabfa')} Short liquidations (sky blue, above price: shorts get forced to buy)</p>
             <p>{sw('#f8931a')} Your position, entry and highlights</p><p>{sw('#ffffff')} Mid price on the heatmap</p><p>{sw('#eab308')} Warnings</p>
             <h4>Pressure score</h4>
-            <p>One number from −100 to +100: book imbalance within 1% (40 pts), 15-minute taker flow (30), which liquidation pool is closer and bigger (20), and crowded funding as a contrarian tilt (10). Above +15 leans up, below −15 leans down. Hover it to see the parts.</p>
+            <p>One number from −100 to +100: book imbalance within 1% (40 pts), 15-minute taker flow (30), which liquidation pool is closer and bigger (20), and crowded funding as a contrarian tilt (10). Above +15 buyers are leaning in, below −15 sellers. It reads positioning, not the future: see "Does the pressure score work?" for how it tests. Hover it to see the parts.</p>
           </div>
           <div>
             <h4>Chart</h4>

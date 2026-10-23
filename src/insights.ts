@@ -2,7 +2,8 @@
 import { Candle, Level, LiqBin, LivePos, Trade, fmtPct, fmtPx, fmtUsd } from './api';
 
 export type Tone = 'bull' | 'bear' | 'warn' | 'info';
-export interface Insight { tone: Tone; title: string; detail: string; score: number; tag: string }
+export interface TradeIdea { label: string; side: 'buy' | 'sell'; price?: number; stop?: number; tp?: number }
+export interface Insight { tone: Tone; title: string; detail: string; score: number; tag: string; ideas?: TradeIdea[] }
 
 export interface Ctx {
   symbol: string; tick: number; mid: number; bids: Level[]; asks: Level[]; trades: Trade[]; candles: Candle[];
@@ -28,6 +29,10 @@ export function atr(c: Candle[], len = 14) {
 export function brief(x: Ctx): { items: Insight[]; bias: number; verdict: string } {
   const out: Insight[] = []; const { mid, tick } = x; if (!mid) return { items: [], bias: 0, verdict: 'Waiting for data…' };
   const px = (v: number) => fmtPx(v, tick);
+  const A = atr(x.candles); const stopD = isFinite(A) ? 1.5 * A : mid * 0.005; const rnd = (v: number) => Math.round(v / tick) * tick;
+  const bb = x.bids[0]?.[0] ?? mid, ba = x.asks[0]?.[0] ?? mid;
+  const longAt = (price: number, label: string, tp?: number): TradeIdea => ({ label, side: 'buy', price: rnd(price), stop: rnd(price - stopD), tp: tp ? rnd(tp) : rnd(price + 2 * stopD) });
+  const shortAt = (price: number, label: string, tp?: number): TradeIdea => ({ label, side: 'sell', price: rnd(price), stop: rnd(price + stopD), tp: tp ? rnd(tp) : rnd(price - 2 * stopD) });
 
   // 1. Order book imbalance near the touch
   const within = (lv: Level[], pct: number) => lv.filter(([p]) => Math.abs(p - mid) / mid <= pct).reduce((s, [p, q]) => s + p * q, 0);
@@ -36,14 +41,16 @@ export function brief(x: Ctx): { items: Insight[]; bias: number; verdict: string
     const imb = (b1 - a1) / (b1 + a1);
     out.push({ tag: 'Book', tone: imb > 0.2 ? 'bull' : imb < -0.2 ? 'bear' : 'info', score: imb * 1.5,
       title: `Book ${imb > 0.2 ? 'leans bid' : imb < -0.2 ? 'leans ask' : 'balanced'} within ±1%`,
-      detail: `${fmtUsd(b1)} of bids vs ${fmtUsd(a1)} of asks inside 1% of mid (${(imb * 100).toFixed(0)}% imbalance). ${imb > 0.2 ? 'Dips are being absorbed.' : imb < -0.2 ? 'Rallies run into heavier supply.' : 'No side is stacking.'}` });
+      detail: `${fmtUsd(b1)} of bids vs ${fmtUsd(a1)} of asks inside 1% of mid (${(imb * 100).toFixed(0)}% imbalance). ${imb > 0.2 ? 'Dips are being absorbed.' : imb < -0.2 ? 'Rallies run into heavier supply.' : 'No side is stacking.'}`,
+      ideas: imb > 0.2 ? [longAt(bb, 'Long at best bid')] : imb < -0.2 ? [shortAt(ba, 'Short at best ask')] : undefined });
   }
 
   // 2. Walls
   const wall = (lv: Level[]) => lv.filter(([p]) => Math.abs(p - mid) / mid <= 0.03).reduce((m, l) => (l[0] * l[1] > m[0] * m[1] ? l : m), [0, 0] as Level);
   const bw = wall(x.bids), aw = wall(x.asks);
   if (bw[1] && aw[1]) out.push({ tag: 'Levels', tone: 'info', score: 0, title: `Support ${px(bw[0])} · resistance ${px(aw[0])}`,
-    detail: `Largest resting bid within 3% is ${fmtUsd(bw[0] * bw[1])} at ${px(bw[0])} (${fmtPct((bw[0] / mid - 1) * 100)}); largest ask is ${fmtUsd(aw[0] * aw[1])} at ${px(aw[0])} (${fmtPct((aw[0] / mid - 1) * 100)}).` });
+    detail: `Largest resting bid within 3% is ${fmtUsd(bw[0] * bw[1])} at ${px(bw[0])} (${fmtPct((bw[0] / mid - 1) * 100)}); largest ask is ${fmtUsd(aw[0] * aw[1])} at ${px(aw[0])} (${fmtPct((aw[0] / mid - 1) * 100)}).`,
+    ideas: [{ label: 'Bid above support', side: 'buy', price: rnd(bw[0] + tick), stop: rnd(bw[0] - stopD), tp: rnd(aw[0] - tick) }, { label: 'Offer below resistance', side: 'sell', price: rnd(aw[0] - tick), stop: rnd(aw[0] + stopD), tp: rnd(bw[0] + tick) }] });
 
   // 3. Execution cost
   const s10 = slippage(x.asks, 10_000, mid), s50 = slippage(x.asks, 50_000, mid);
@@ -58,7 +65,8 @@ export function brief(x: Ctx): { items: Insight[]; bias: number; verdict: string
     const lUsd = below ? below.long * below.price : 0, sUsd = above ? above.short * above.price : 0;
     if (below || above) out.push({ tag: 'Liquidations', tone: sUsd > lUsd * 1.3 ? 'bull' : lUsd > sUsd * 1.3 ? 'bear' : 'info', score: sUsd > lUsd * 1.3 ? 0.5 : lUsd > sUsd * 1.3 ? -0.5 : 0,
       title: `Liquidation magnets: ${below ? px(below.price) : '—'} below · ${above ? px(above.price) : '—'} above`,
-      detail: `${below ? `${fmtUsd(lUsd)} of longs get liquidated near ${px(below.price)} (${fmtPct((below.price / mid - 1) * 100)})` : 'No long cluster below'}; ${above ? `${fmtUsd(sUsd)} of shorts near ${px(above.price)} (${fmtPct((above.price / mid - 1) * 100)})` : 'no short cluster above'}. Price often gets pulled toward the bigger pool; cascades can overshoot.` });
+      detail: `${below ? `${fmtUsd(lUsd)} of longs get liquidated near ${px(below.price)} (${fmtPct((below.price / mid - 1) * 100)})` : 'No long cluster below'}; ${above ? `${fmtUsd(sUsd)} of shorts near ${px(above.price)} (${fmtPct((above.price / mid - 1) * 100)})` : 'no short cluster above'}. Price often gets pulled toward the bigger pool; cascades can overshoot.`,
+      ideas: [...(above ? [longAt(bb, `Long toward ${px(above.price)} shorts`, above.price)] : []), ...(below ? [shortAt(ba, `Short toward ${px(below.price)} longs`, below.price)] : [])] });
   }
 
   // 5. Funding
@@ -86,7 +94,8 @@ export function brief(x: Ctx): { items: Insight[]; bias: number; verdict: string
     const buy = recent.filter(t => t.buy).reduce((s, t) => s + t.price * t.qty, 0), sell = recent.filter(t => !t.buy).reduce((s, t) => s + t.price * t.qty, 0);
     const d = (buy - sell) / Math.max(1, buy + sell); const big = recent.reduce((m, t) => (t.price * t.qty > m.price * m.qty ? t : m), recent[0]);
     out.push({ tag: 'Flow', tone: d > 0.2 ? 'bull' : d < -0.2 ? 'bear' : 'info', score: d, title: `15-min flow: ${d > 0.2 ? 'aggressive buying' : d < -0.2 ? 'aggressive selling' : 'two-sided'} (${(d * 100).toFixed(0)}% delta)`,
-      detail: `${fmtUsd(buy)} taker buys vs ${fmtUsd(sell)} taker sells across ${recent.length} prints. Largest print: ${fmtUsd(big.price * big.qty)} ${big.buy ? 'buy' : 'sell'} at ${px(big.price)}.` });
+      detail: `${fmtUsd(buy)} taker buys vs ${fmtUsd(sell)} taker sells across ${recent.length} prints. Largest print: ${fmtUsd(big.price * big.qty)} ${big.buy ? 'buy' : 'sell'} at ${px(big.price)}.`,
+      ideas: d > 0.2 ? [longAt(bb, 'Follow buyers')] : d < -0.2 ? [shortAt(ba, 'Follow sellers')] : undefined });
   }
 
   // 8. OI vs price
@@ -115,9 +124,29 @@ export function brief(x: Ctx): { items: Insight[]; bias: number; verdict: string
   // 11. Volatility-based stop
   const a = atr(x.candles);
   if (isFinite(a)) out.push({ tag: 'Risk', tone: 'info', score: 0, title: `ATR ${px(a)} (${(a / mid * 100).toFixed(2)}%) per candle`,
-    detail: `A 1.5×ATR stop is ${px(1.5 * a)} away: long stop ≈ ${px(mid - 1.5 * a)}, short stop ≈ ${px(mid + 1.5 * a)}. Max sensible leverage for that stop ≈ ${Math.max(1, Math.floor(100 / (1.5 * a / mid * 100) / 2))}x.` });
+    detail: `A 1.5×ATR stop is ${px(1.5 * a)} away: long stop ≈ ${px(mid - 1.5 * a)}, short stop ≈ ${px(mid + 1.5 * a)}. Max sensible leverage for that stop ≈ ${Math.max(1, Math.floor(100 / (1.5 * a / mid * 100) / 2))}x.`,
+    ideas: [longAt(bb, 'Long with ATR stop'), shortAt(ba, 'Short with ATR stop')] });
 
   const bias = Math.max(-1, Math.min(1, out.reduce((s, i) => s + i.score, 0) / 3));
   const verdict = bias > 0.35 ? 'Bullish lean' : bias < -0.35 ? 'Bearish lean' : bias > 0.12 ? 'Slightly bullish' : bias < -0.12 ? 'Slightly bearish' : 'Neutral / range';
   return { items: out, bias, verdict };
+}
+
+// Pressure score: one number from -100 (sell pressure) to +100 (buy pressure).
+// Weights: book imbalance within 1% (40), 15-min taker delta (30), liquidation pull (20), funding crowding (10, contrarian).
+export interface PressureIn { mid: number; bids: Level[]; asks: Level[]; trades: Trade[]; liq: LiqBin[]; fundingHourly?: number }
+export function pressure(x: PressureIn): { score: number; parts: Record<string, number> } {
+  const { mid } = x; if (!mid) return { score: NaN, parts: {} };
+  const within = (lv: Level[]) => lv.filter(([p]) => Math.abs(p - mid) / mid <= 0.01).reduce((s, [p, q]) => s + p * q, 0);
+  const b = within(x.bids), a = within(x.asks); const book = b + a ? (b - a) / (b + a) : 0;
+  const now = Date.now(); const rec = x.trades.filter(t => now - t.time < 15 * 60_000);
+  const buy = rec.filter(t => t.buy).reduce((s, t) => s + t.price * t.qty, 0), sell = rec.filter(t => !t.buy).reduce((s, t) => s + t.price * t.qty, 0);
+  const flow = buy + sell > 0 ? (buy - sell) / (buy + sell) * Math.min(1, rec.length / 5) : 0;
+  const near = x.liq.filter(l => Math.abs(l.price - mid) / mid <= 0.1);
+  const up = near.filter(l => l.price > mid).reduce((s, l) => s + l.short * l.price / Math.max(0.002, (l.price - mid) / mid), 0);
+  const dn = near.filter(l => l.price < mid).reduce((s, l) => s + l.long * l.price / Math.max(0.002, (mid - l.price) / mid), 0);
+  const liq = up + dn ? (up - dn) / (up + dn) : 0;
+  const apr = (x.fundingHourly ?? 0) * 24 * 365 * 100; const fund = -Math.max(-1, Math.min(1, apr / 50));
+  const parts = { book: book * 40, flow: flow * 30, liquidations: liq * 20, funding: fund * 10 };
+  return { score: Math.round(Object.values(parts).reduce((s, v) => s + v, 0)), parts };
 }

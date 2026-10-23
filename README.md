@@ -2,7 +2,7 @@
 
 **See the market the way a market maker does.** Strike Zone is a live order-flow, liquidity and risk visualizer for [Strike Finance](https://strikefinance.org) perpetuals, with a built-in order ticket that trades on Strike through API wallets.
 
-**Live demo:** https://cipoklean-strike-zone.static.hf.space
+**Live demo:** https://strike-zone-nine.vercel.app
 
 Built solo for the Strike Hackathon (Oct 21–23, 2026).
 
@@ -16,6 +16,10 @@ Strike V2 is a full CLOB with a public API, but traders still navigate it with a
 
 | Feature | What a trader gets | Strike data used |
 |---|---|---|
+| **Pressure score** | One number from −100 to +100 per market: book imbalance (40), 15-min taker flow (30), liquidation pull (20), crowded funding as a contrarian tilt (10). Big in the header with a breakdown on hover, and on every market in the strip so you can see where the action is at a glance. | depth, trades, `premiumIndex`, liquidation map for the 12 most active markets |
+| **Signal → ticket** | Every actionable Trader-brief card has buttons ("Long toward 87,024 shorts", "Bid above support") that load side, entry, a 1.5×ATR stop and a target into the order ticket in one click, with the full risk preview. | brief + ticket |
+| **Alerts** | Browser notifications and a webhook when price nears a liquidation cluster, funding flips, a whale nears liquidation, or pressure goes extreme. The webhook feeds Telegram/Discord bots ([ALERTS.md](ALERTS.md)). | live state + stats |
+| **Session replay** | Scrub or play back up to 30 minutes of the 1-second heatmap this tab recorded, to see walls get pulled and absorbed before a move. | recorded `depth` + `trade` stream |
 | **Liquidity + liquidation map on the chart** | Candles with two price-aligned profiles: resting order-book depth (left) and the liquidation map (right; orange = long liquidations below, blue = short liquidations above). Whale liquidation levels drawn as dashed lines. | `/price/v2/klines`, `kline_*` WS, `/price/v2/depth`, `depth` WS, `/stat/v1/stats/coin/liquidation-map`, `/stat/v1/stats/live-positions` |
 | **Order-flow heatmap** | Bookmap-style view: every column is one second of Strike's live book; brightness = resting USD; taker trades as bubbles; mid-price line; hover readout. Spot spoofing, pulled walls and absorption. | `depth` + `trade` WebSocket |
 | **Trader brief** | 11 auto-generated signals with a bullish/bearish gauge: book imbalance, support/resistance walls, execution cost, liquidation magnets, funding and cross-venue carry, mark-index basis, 15-min taker delta, OI vs price, crowd vs top-trader positioning, whale liquidation risk, ATR-based stop and leverage guidance. | all of the above + `/stat/v1/stats/coin/history/*`, `markprice` WS |
@@ -24,8 +28,20 @@ Strike V2 is a full CLOB with a public API, but traders still navigate it with a
 | **Order ticket with pre-trade risk** | Long/short, limit/market, leverage, SL/TP, post-only, reduce-only. Before you send: estimated fill and slippage from the live book, margin, maker/taker fee, estimated liquidation price, hourly funding you pay or receive, risk at stop as % of equity, R-multiple, plus warnings (liquidation inside 2×ATR, stop beyond liquidation, liquidation cluster between entry and liq, thin book). | Signed `/v2/leverage`, `/v2/order`, `/v2/openOrders`, `/v2/order/cancel`, `/v2/account` |
 | **Wallet lens** | Paste any Cardano, EVM or Solana address: equity, available margin, margin ratio and a health meter, every position with distance to liquidation, net funding, realized PnL and volume. The selected market's entry and liquidation are drawn on the chart. | `/v2/account`, `/v2/positions`, `/v2/portfolio`, `/v2/openOrders` by `blockchain_address` |
 | **Discover** | Largest live positions per market, leaderboard (24h/7d/30d/all), copy-trader discovery with copy score and 30-day equity curve, and vaults (APR, Sharpe, depositors). Click any trader to open them in the wallet lens. | `/stat/v1/stats/leaderboard`, `/v2/copy/discover`, `/v2/vaults` |
-| **Funding arbitrage scanner** | Strike's funding vs Binance, Bybit, OKX, Hyperliquid, Lighter and others for every market, ranked by APR gap with a carry suggestion. | `/stat/v1/stats/coin/funding-rate-comparison` |
+| **Funding arbitrage scanner** | Strike's funding vs Binance, Bybit, OKX, Hyperliquid, Lighter and others for every market. Enter a size and holding period: it picks the best hedge venue and ranks by net carry after taker fees on both legs, with break-even days. | `/stat/v1/stats/coin/funding-rate-comparison` |
 | **Market strip + platform stats** | All 30+ Strike markets (crypto, equities, commodities) with live 24h change; protocol users, volume, liquidations and revenue. | `!miniticker@arr` WS, `/price/v2/ticker/24hr`, `/stat/v1/dashboard/summary` |
+
+## How to read it
+
+- **Green / red**: bids and buyers / asks and sellers. **Orange**: long liquidations (below price, forced sells). **Blue**: short liquidations (above price, forced buys). **Yellow**: mid price and your own position.
+- **Chart edges**: left is resting liquidity, right is the liquidation map. Price tends to get pulled toward the bigger liquidation pool.
+- **Heatmap**: bright bands are big resting orders. A band that disappears as price approaches it was likely a spoof; a band that holds while bubbles hit it is absorption.
+- **Pressure** above +15 leans up, below −15 leans down. Hover for its parts.
+- Press **?** in the app for the full legend.
+
+**Keyboard:** `1`–`6` timeframe · `J`/`K` next/previous market · `B`/`S` long/short · `R` heatmap replay · `L` liquidity profile · `W` whale lines · `/` filter markets · `?` help.
+
+**Reliability:** a live/stale indicator with "updated Xs ago", a warning banner when the feed goes quiet, and a demo mode that falls back to the last snapshot (or a bundled one for the top markets) if Strike's API is unreachable, then resumes live automatically. **Share** copies a link to the exact view (market, timeframe, heatmap range, wallet). On phones the ticket becomes a bottom sheet.
 
 ## Trading safely
 
@@ -50,9 +66,11 @@ React 18, TypeScript, Vite, TradingView lightweight-charts, Canvas 2D for the he
 - Liquidation price in the ticket is an isolated-margin estimate at the 0.5% tier-1 maintenance rate; cross margin uses the whole balance.
 - Funding: Strike pays hourly; the scanner compares 8-hour-equivalent rates as Strike's stats API publishes them.
 - Signals are heuristics, not financial advice.
+- Strike does not publish historical order books, so replay covers only what the open tab has recorded (up to 30 minutes), not past events.
+- Browser alerts run while the tab is open; for always-on alerts, point the webhook at a bot backend ([ALERTS.md](ALERTS.md)).
 
 ## Roadmap
 
-L3 per-order view (queue position, order lifetime), builder-code routing, alerts on liquidation-cluster proximity, and a mobile layout tuned for one-hand trading.
+L3 per-order view (queue position, order lifetime), builder-code routing, server-side alerts with Telegram/Discord bots, multi-market alert watchlists, and a light theme.
 
 MIT License.

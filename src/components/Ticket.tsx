@@ -9,7 +9,8 @@ import { atr, slippage } from '../insights';
 const TAKER = 0.0005, MAKER = -0.00005, MMR = 0.005; // tier-0 fees; tier-1 maintenance rate (docs example)
 
 // Order ticket with a pre-trade risk preview, wired to Strike's signed trading API (API wallets cannot withdraw).
-export default function Ticket({ m, info, pickPrice, onAccount }: { m: MarketState; info?: SymbolInfo; pickPrice?: number; onAccount: (a: string) => void }) {
+export interface Preset { side: 'buy' | 'sell'; price?: number; stop?: number; tp?: number; seq: number }
+export default function Ticket({ m, info, pickPrice, onAccount, preset }: { m: MarketState; info?: SymbolInfo; pickPrice?: number; onAccount: (a: string) => void; preset?: Preset }) {
   const sym = info?.symbol || ''; const tick = info?.tickSize || 0.01; const step = info?.stepSize || 0.001;
   const [side, setSide] = useState<'buy' | 'sell'>('buy'); const [type, setType] = useState<'limit' | 'market'>('limit');
   const [usd, setUsd] = useState('100'); const [price, setPrice] = useState(''); const [lev, setLev] = useState(5); const [stop, setStop] = useState(''); const [tp, setTp] = useState('');
@@ -19,6 +20,9 @@ export default function Ticket({ m, info, pickPrice, onAccount }: { m: MarketSta
 
   useEffect(() => { if (pickPrice) { setType('limit'); setPrice(String(pickPrice)); } }, [pickPrice]);
   useEffect(() => { setPrice(''); setStop(''); setTp(''); }, [sym]);
+  const clean = (v?: number) => (v && isFinite(v) ? String(+v.toFixed(Math.max(0, Math.ceil(-Math.log10(tick))))) : '');
+  useEffect(() => { if (!preset) return; setSide(preset.side); setType('limit'); setPrice(clean(preset.price)); setStop(clean(preset.stop)); setTp(clean(preset.tp)); setReduceOnly(false); }, [preset?.seq]);
+  useEffect(() => { const h = (e: any) => setSide(e.detail); addEventListener('sz-side', h); return () => removeEventListener('sz-side', h); }, []);
 
   const bestBid = m.bids[0]?.[0], bestAsk = m.asks[0]?.[0]; const mid = bestBid && bestAsk ? (bestBid + bestAsk) / 2 : m.mark || 0;
   const p = useMemo(() => {
@@ -70,7 +74,7 @@ export default function Ticket({ m, info, pickPrice, onAccount }: { m: MarketSta
 
   const base = sym.split('-')[0]?.toLowerCase();
   return (
-    <div className="panel ticket">
+    <div className="panel ticket" id="ticket">
       <div className="ph"><b>Trade {sym}</b><a href={`${APP}/perpetuals/${base}`} target="_blank">Open on Strike ↗</a></div>
       <div className="seg"><button className={side === 'buy' ? 'on buy' : ''} onClick={() => setSide('buy')}>Long</button><button className={side === 'sell' ? 'on sell' : ''} onClick={() => setSide('sell')}>Short</button></div>
       <div className="seg small"><button className={type === 'limit' ? 'on' : ''} onClick={() => setType('limit')}>Limit</button><button className={type === 'market' ? 'on' : ''} onClick={() => setType('market')}>Market</button></div>

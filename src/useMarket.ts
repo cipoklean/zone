@@ -7,9 +7,12 @@ export interface MarketState {
   bids: Level[]; asks: Level[]; trades: Trade[]; candles: Candle[]; mark?: number; index?: number; fundingHourly?: number; nextFunding?: number;
   liq: LiqBin[]; live: LivePos[]; oi?: number; oiSeries: number[][]; fundingSeries: number[][]; ls?: { long: number; short: number }; topLs?: { long: number; short: number };
   spreadSeries: number[][]; heat: HeatCol[]; version: number; loading: boolean;
+  lastMsg: number; error?: string; demo?: number; // demo = timestamp of the cached snapshot in use
 }
 
-const empty = (): MarketState => ({ bids: [], asks: [], trades: [], candles: [], liq: [], live: [], oiSeries: [], fundingSeries: [], spreadSeries: [], heat: [], version: 0, loading: true });
+const empty = (): MarketState => ({ bids: [], asks: [], trades: [], candles: [], liq: [], live: [], oiSeries: [], fundingSeries: [], spreadSeries: [], heat: [], version: 0, loading: true, lastMsg: 0 });
+export const HEAT_MAX = 1800; // 30 minutes of 1s columns for session replay
+const cacheKey = (s: string, i: string) => `sz-snap:${s}:${i}`;
 
 export function useMarket(symbol: string, interval: string) {
   const ref = useRef<MarketState>(empty());
@@ -32,7 +35,7 @@ export function useMarket(symbol: string, interval: string) {
       for (const [p, q] of m.a) { const pn = +p, qn = +q; qn === 0 ? book.current.asks.delete(pn) : book.current.asks.set(pn, qn); }
     };
     const off = A.hub.on(m => {
-      if (!alive || (m.s && m.s !== symbol)) return;
+      if (!alive || (m.s && m.s !== symbol)) return; ref.current.lastMsg = Date.now(); if (ref.current.demo && m.e === 'depthUpdate') { ref.current.demo = undefined; ref.current.error = undefined; }
       if (m.e === 'depthUpdate') { if (!book.current.id) buffered.push(m); else applyDepth(m); }
       else if (m.e === 'trade') {
         const t: Trade = { id: m.t, price: +m.p, qty: +m.q, time: m.T, buy: !m.m };
@@ -51,16 +54,27 @@ export function useMarket(symbol: string, interval: string) {
         const [d, tr, kl, pr, oi] = await Promise.all([A.fetchDepth(symbol, 1000), A.fetchTrades(symbol, 300), A.fetchKlines(symbol, interval, 500), A.fetchPremium(symbol), A.fetchOI(symbol)]);
         if (!alive) return;
         book.current = { id: d.lastUpdateId, bids: new Map(d.bids), asks: new Map(d.asks) }; buffered.forEach(applyDepth); sorted();
-        Object.assign(ref.current, { trades: tr, candles: kl, mark: pr.markPrice, index: pr.indexPrice, fundingHourly: pr.fundingRate, nextFunding: pr.nextFundingTime, oi, loading: false });
+        Object.assign(ref.current, { trades: tr, candles: kl, mark: pr.markPrice, index: pr.indexPrice, fundingHourly: pr.fundingRate, nextFunding: pr.nextFundingTime, oi, loading: false, lastMsg: Date.now(), error: undefined });
+        try { localStorage.setItem(cacheKey(symbol, interval), JSON.stringify({ at: Date.now(), d: { lastUpdateId: d.lastUpdateId, bids: d.bids.slice(0, 300), asks: d.asks.slice(0, 300) }, tr: tr.slice(0, 200), kl, pr, oi })); } catch {}
         bump();
-      } catch (e) { console.error(e); ref.current.loading = false; bump(); }
+      } catch (e: any) {
+        console.error(e); if (!alive) return; ref.current.loading = false; ref.current.error = `Strike API unreachable (${e?.message || e})`;
+        // Demo mode: fall back to the last snapshot this browser saw, else the bundled one
+        let snap: any = null; try { snap = JSON.parse(localStorage.getItem(cacheKey(symbol, interval)) || 'null'); } catch {}
+        if (!snap) snap = await fetch(`./demo/${symbol}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
+        if (snap && alive) {
+          book.current = { id: snap.d.lastUpdateId, bids: new Map(snap.d.bids), asks: new Map(snap.d.asks) }; sorted();
+          Object.assign(ref.current, { trades: snap.tr, candles: snap.kl, mark: snap.pr.markPrice, index: snap.pr.indexPrice, fundingHourly: snap.pr.fundingRate, nextFunding: snap.pr.nextFundingTime, oi: snap.oi, demo: snap.at });
+        }
+        bump();
+      }
     })();
 
     // UI tick: rebuild sorted book + record heatmap column every second
     const tick = setInterval(() => {
       if (!book.current.id) return; sorted(); const s = ref.current;
       const mid = s.bids[0] && s.asks[0] ? (s.bids[0][0] + s.asks[0][0]) / 2 : 0;
-      if (mid) { s.heat.push({ t: Date.now(), mid, bids: s.bids.slice(0, 200), asks: s.asks.slice(0, 200), buys: flow.current.buys, sells: flow.current.sells }); if (s.heat.length > 600) s.heat.shift(); }
+      if (mid) { s.heat.push({ t: Date.now(), mid, bids: s.bids.slice(0, 150), asks: s.asks.slice(0, 150), buys: flow.current.buys, sells: flow.current.sells }); if (s.heat.length > HEAT_MAX) s.heat.shift(); }
       flow.current = { buys: 0, sells: 0 }; bump();
     }, 1000);
 

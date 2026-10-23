@@ -1,7 +1,7 @@
 {
-  "name": "strike-lens",
+  "name": "strike-zone",
   "version": "1.0.0",
-  "description": "Strike Lens: order-flow, liquidity and risk visualizer for Strike Finance perps",
+  "description": "Strike Zone: order-flow, liquidity and risk visualizer for Strike Finance perps",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

@@ -1,8 +1,8 @@
-# ⚡ Strike Lens
+# ⚡ Strike Zone
 
-**See the market the way a market maker does.** Strike Lens is a live order-flow, liquidity and risk visualizer for [Strike Finance](https://strikefinance.org) perpetuals, with a built-in order ticket that trades on Strike through API wallets.
+**See the market the way a market maker does.** Strike Zone is a live order-flow, liquidity and risk visualizer for [Strike Finance](https://strikefinance.org) perpetuals, with a built-in order ticket that trades on Strike through API wallets.
 
-**Live demo:** https://cipoklean-strike-lens.static.hf.space
+**Live demo:** https://cipoklean-strike-zone.static.hf.space
 
 Built solo for the Strike Hackathon (Oct 21–23, 2026).
 
@@ -10,7 +10,7 @@ Built solo for the Strike Hackathon (Oct 21–23, 2026).
 
 ## Why
 
-Strike V2 is a full CLOB with a public API, but traders still navigate it with a price chart and a guess. The information that actually moves perps (where liquidity rests, where leveraged traders get liquidated, who is paying funding, what whales are holding) is spread across a dozen endpoints. Strike Lens puts all of it on one screen, aligned to price, and turns it into plain-language reads a trader can act on.
+Strike V2 is a full CLOB with a public API, but traders still navigate it with a price chart and a guess. The information that actually moves perps (where liquidity rests, where leveraged traders get liquidated, who is paying funding, what whales are holding) is spread across a dozen endpoints. Strike Zone puts all of it on one screen, aligned to price, and turns it into plain-language reads a trader can act on.
 
 ## What it does
 

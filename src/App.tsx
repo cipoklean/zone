@@ -32,7 +32,7 @@ export default function App() {
     const off = A.hub.on(msg => { if (msg.e === '24hrMiniTicker') setTickers(prev => { const o = prev[msg.s] || ({} as A.Ticker); const last = +msg.c, open = +msg.o; return { ...prev, [msg.s]: { ...o, symbol: msg.s, lastPrice: last, priceChangePercent: (last / open - 1) * 100, highPrice: +msg.h, lowPrice: +msg.l, volume: +msg.v, quoteVolume: +msg.q } }; }); });
     return () => { off(); };
   }, []);
-  useEffect(() => { const p = new URLSearchParams({ s: symbol, i: interval, ...(addr ? { addr } : {}) }); history.replaceState(null, '', '?' + p); document.title = `${symbol} ${fmtPx(m.mark ?? NaN, info?.tickSize)} · Strike Lens`; }, [symbol, interval, addr, Math.floor(m.version / 5)]);
+  useEffect(() => { const p = new URLSearchParams({ s: symbol, i: interval, ...(addr ? { addr } : {}) }); history.replaceState(null, '', '?' + p); document.title = `${symbol} ${fmtPx(m.mark ?? NaN, info?.tickSize)} · Strike Zone`; }, [symbol, interval, addr, Math.floor(m.version / 5)]);
 
   const info = symbols.find(s => s.symbol === symbol); const tick = info?.tickSize || 0.01; const t = tickers[symbol];
   const marks = useMemo(() => Object.fromEntries(Object.values(tickers).map(t => [t.symbol, t.lastPrice])), [tickers]);
@@ -44,7 +44,7 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <div className="brand"><svg width="26" height="26" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="#f5c542" strokeWidth="2.5" /><path d="M17 7l-6 10h5l-1 8 6-10h-5z" fill="#f5c542" /></svg><div><b>Strike Lens</b><span>order flow · liquidity · risk for Strike perps</span></div></div>
+        <div className="brand"><svg width="26" height="26" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" fill="none" stroke="#f5c542" strokeWidth="2.5" /><path d="M17 7l-6 10h5l-1 8 6-10h-5z" fill="#f5c542" /></svg><div><b>Strike Zone</b><span>order flow · liquidity · risk for Strike perps</span></div></div>
         {summary && <div className="stats"><span>Users <b>{(+summary.total_users).toLocaleString()}</b></span><span>All-time volume <b>{fmtUsd(+summary.total_volume_usd)}</b></span><span>Liquidated <b>{fmtUsd(+summary.total_liquidated_usd)}</b></span><span>Revenue <b>{fmtUsd(+summary.total_revenue_usd)}</b></span></div>}
         <span className={`live ${status}`}>{status === 'live' ? '● live' : status === 'connecting' ? '○ connecting' : '○ reconnecting'}</span>
       </header>
@@ -82,7 +82,7 @@ export default function App() {
       <section><Discover onWallet={pickWallet} symbol={symbol} mark={m.mark} /></section>
       <section><FundingArb rows={funding} onPick={s => { setSymbol(s); scrollTo({ top: 0, behavior: 'smooth' }); }} /></section>
 
-      <footer>Built on Strike Finance's public market, stats, vault and copy-trading APIs, plus signed API-wallet trading. Data from api.strikefinance.org. Not financial advice. <a href="https://github.com/cipoklean/strike-lens" target="_blank">Source</a></footer>
+      <footer>Built on Strike Finance's public market, stats, vault and copy-trading APIs, plus signed API-wallet trading. Data from api.strikefinance.org. Not financial advice. <a href="https://github.com/cipoklean/zone" target="_blank">Source</a></footer>
     </div>
   );
 }

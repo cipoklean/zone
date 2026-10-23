@@ -8,7 +8,7 @@ Built solo for the Strike Hackathon (Oct 21–23, 2026).
 
 ![Strike Zone](docs/screenshot.png)
 
-**60-second demo:** [docs/demo.mp4](docs/demo.mp4)
+**90-second demo (narrated walkthrough):** [docs/demo.mp4](docs/demo.mp4)
 
 ## The 30-second version
 

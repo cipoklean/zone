@@ -8,6 +8,8 @@ Built solo for the Strike Hackathon (Oct 21–23, 2026).
 
 ![Strike Zone](docs/screenshot.png)
 
+**60-second demo:** [docs/demo.mp4](docs/demo.mp4)
+
 ## The 30-second version
 
 1. **Read the pressure.** The number beside the price says who is leaning right now (book, flow, nearby liquidations, funding), from −100 to +100.
